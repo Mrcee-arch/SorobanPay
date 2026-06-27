@@ -308,6 +308,49 @@ NEXT_PUBLIC_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 | `NEXT_PUBLIC_RPC_URL` | ✅ | Soroban RPC endpoint |
 | `NEXT_PUBLIC_NETWORK_PASSPHRASE` | ✅ | Must match the network Freighter is set to |
 
+### Configuration Validation & Troubleshooting
+
+If the app shows a yellow **"Configuration incomplete or invalid"** card, check the following:
+
+#### Contract ID validation
+
+**Error:** `CONTRACT_ID is not set`
+- **Cause:** `NEXT_PUBLIC_CONTRACT_ID` is missing or empty in `.env.local`
+- **Fix:**
+  1. Run `bash deploy/deploy.sh` to deploy the contract
+  2. Copy the printed address (starts with `C`)
+  3. Add it to `.env.local`: `NEXT_PUBLIC_CONTRACT_ID=CABC...`
+  4. Restart the dev server: `npm run dev`
+
+**Error:** `CONTRACT_ID should start with 'C'`
+- **Cause:** Invalid contract address format
+- **Fix:** Ensure the address from `deploy.sh` is copied correctly. Valid addresses are 56 characters starting with `C`
+
+**Error:** `CONTRACT_ID should be 56 characters`
+- **Cause:** Address is truncated or malformed
+- **Fix:** Verify the full address was copied from `deploy.sh` output
+
+#### RPC URL validation
+
+**Error:** `RPC_URL is malformed`
+- **Cause:** `NEXT_PUBLIC_RPC_URL` is not a valid URL
+- **Fix:** Use a valid HTTPS URL:
+  - Testnet: `https://soroban-testnet.stellar.org`
+  - Mainnet: `https://mainnet.stellar.validationcloud.io/v1/<YOUR_KEY>`
+
+**Error:** `RPC URL must use https:// or http://`
+- **Cause:** Invalid protocol
+- **Fix:** Use `https://` (preferred) or `http://`
+
+#### Network passphrase validation
+
+**Error:** `NETWORK_PASSPHRASE should contain "SDF Network"`
+- **Cause:** Passphrase doesn't match expected value
+- **Fix:** Use exactly one of:
+  - **Testnet:** `Test SDF Network ; September 2015`
+  - **Mainnet:** `Public Global Stellar Network ; September 2015`
+- **Important:** This must match the network selected in Freighter
+
 ### 3. Install dependencies and run
 
 ```bash

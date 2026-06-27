@@ -54,6 +54,10 @@ import {
   NETWORK_PASSPHRASE,
   NETWORK_NAME,
   RPC_URL,
+  isValidContractId,
+  isValidRpcUrl,
+  isValidNetworkPassphrase,
+  validateAllConfig,
 } from "@/constants/network";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -196,14 +200,30 @@ function NetworkBadge() {
     </div>
   );
 }
+validation = validateAllConfig();
+  const contractCheck = isValidContractId();
+  const rpcCheck = isValidRpcUrl();
+  const passphraseCheck = isValidNetworkPassphrase();
 
-// ─── Contract config guard ─────────────────────────────────────────────────────
-
-function ContractConfigError() {
   const config = [
-    ['RPC URL', RPC_URL],
-    ['Network passphrase', NETWORK_PASSPHRASE],
-    ['Contract ID', CONTRACT_ID || 'Not configured'],
+    {
+      label: 'RPC URL',
+      value: RPC_URL,
+      status: rpcCheck.valid ? 'valid' : 'invalid',
+      error: !rpcCheck.valid ? rpcCheck.error : undefined,
+    },
+    {
+      label: 'Network passphrase',
+      value: NETWORK_PASSPHRASE,
+      status: passphraseCheck.valid ? 'valid' : 'invalid',
+      error: !passphraseCheck.valid ? passphraseCheck.error : undefined,
+    },
+    {
+      label: 'Contract ID',
+      value: CONTRACT_ID || 'Not configured',
+      status: contractCheck.valid ? 'valid' : 'invalid',
+      error: !contractCheck.valid ? contractCheck.error : undefined,
+    },
   ];
 
   return (
@@ -218,62 +238,112 @@ function ContractConfigError() {
           </span>
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold text-yellow-300 mb-2">
-              Contract not configured
+              Configuration incomplete or invalid
             </h2>
             <p className="text-gray-300 text-sm leading-relaxed">
-              The app cannot find a valid Soroban contract address. This is an
-              environment setup issue, not a wallet problem.
+              The app detected {validation.errors.length} configuration issue
+              {validation.errors.length !== 1 ? 's' : ''} that need to be fixed
+              before you can use SorobanPay.
             </p>
           </div>
         </div>
 
+        {/* Configuration validation results */}
+        <dl className="bg-gray-900/60 rounded-lg p-4 sm:p-6 mb-6 space-y-4">
+          {config.map((item) => (
+            <div key={item.label}>
+              <div className="flex items-center gap-2 mb-1">
+                <dt className="text-yellow-300 font-semibold text-sm">
+                  {item.label}
+                </dt>
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                    item.status === 'valid'
+                      ? 'bg-green-900/40 text-green-300 border border-green-600/50'
+                      : 'bg-red-900/40 text-red-300 border border-red-600/50'
+                  }`}
+                >
+                  {item.status === 'valid' ? '✓' : '✗'} {item.status}
+                </span>
+              </div>
+              <dd className="mt-1 break-all font-mono text-xs text-gray-300">
+                {item.value}
+              </dd>
+              {item.error && (
+                <p className="mt-2 text-xs text-red-300 bg-red-900/20 border border-red-600/30 rounded px-2 py-1 leading-relaxed">
+                  {item.error}
+                </p>
+              )}
+            </div>
+          ))}
+        </dl>
+
         <div className="bg-gray-900/60 rounded-lg p-4 sm:p-6 mb-6">
           <h3 className="text-yellow-300 font-semibold text-base mb-4">
-            Remediation steps:
+            How to fix this:
           </h3>
           <ol className="list-decimal list-inside space-y-3 text-sm text-gray-300">
-            <li className="leading-relaxed">
-              Deploy the contract:
-              <pre className="mt-2 bg-gray-800 rounded-lg p-3 text-xs overflow-x-auto border border-gray-700">
-                <code>bash deploy/deploy.sh</code>
-              </pre>
-            </li>
-            <li className="leading-relaxed">
-              Copy the printed address into{" "}
-              <code className="bg-gray-800 px-2 py-1 rounded text-yellow-300 text-xs font-mono">
-                frontend/.env.local
-              </code>
-              :
-              <div className="mt-2 flex items-center gap-2">
-                <pre className="flex-1 bg-gray-800 rounded-lg p-3 text-xs overflow-x-auto border border-gray-700">
-                  <code>NEXT_PUBLIC_CONTRACT_ID=C…your_address…</code>
+            {!contractCheck.valid && (
+              <li className="leading-relaxed">
+                <strong>Deploy the contract</strong> if you haven't already:
+                <pre className="mt-2 bg-gray-800 rounded-lg p-3 text-xs overflow-x-auto border border-gray-700 font-mono">
+                  bash deploy/deploy.sh
                 </pre>
-                <CopyButton
-                  text="NEXT_PUBLIC_CONTRACT_ID=C…your_address…"
-                  label="Copy"
-                />
+              </li>
+            )}
+            <li className="leading-relaxed">
+              <strong>Create frontend/.env.local</strong> with your configuration:
+              <div className="mt-2 space-y-2">
+                {contractCheck.valid && (
+                  <p className="text-green-300 text-xs">✓ Contract ID is valid</p>
+                )}
+                {!contractCheck.valid && (
+                  <div className="flex items-center gap-2">
+                    <pre className="flex-1 bg-gray-800 rounded-lg p-3 text-xs overflow-x-auto border border-gray-700 font-mono">
+                      NEXT_PUBLIC_CONTRACT_ID=CABC...your_address...
+                    </pre>
+                    <CopyButton
+                      text="NEXT_PUBLIC_CONTRACT_ID=CABC...your_address..."
+                      label="Copy"
+                    />
+                  </div>
+                )}
+                {rpcCheck.valid && (
+                  <p className="text-green-300 text-xs">✓ RPC URL is valid</p>
+                )}
+                {!rpcCheck.valid && (
+                  <div className="flex items-center gap-2">
+                    <pre className="flex-1 bg-gray-800 rounded-lg p-3 text-xs overflow-x-auto border border-gray-700 font-mono">
+                      NEXT_PUBLIC_RPC_URL=https://soroban-testnet.stellar.org
+                    </pre>
+                    <CopyButton
+                      text="NEXT_PUBLIC_RPC_URL=https://soroban-testnet.stellar.org"
+                      label="Copy"
+                    />
+                  </div>
+                )}
               </div>
             </li>
             <li className="leading-relaxed">
-              Restart the dev server:
-              <pre className="mt-2 bg-gray-800 rounded-lg p-3 text-xs overflow-x-auto border border-gray-700">
-                <code>npm run dev</code>
+              <strong>Restart the dev server:</strong>
+              <pre className="mt-2 bg-gray-800 rounded-lg p-3 text-xs overflow-x-auto border border-gray-700 font-mono">
+                npm run dev
               </pre>
             </li>
           </ol>
         </div>
 
-        <dl className="bg-gray-900/60 rounded-lg p-4 mb-6 space-y-3 text-xs">
-          {config.map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-yellow-300 font-semibold">{label}</dt>
-              <dd className="mt-1 break-all font-mono text-gray-300">{value}</dd>
-            </div>
-          ))}
-        </dl>
-
-        <div className="border-t border-yellow-600/30 pt-4">
+        <div className="border-t border-yellow-600/30 pt-4 space-y-2">
           <p className="text-xs text-gray-300">
+            📖 For complete setup instructions, see:
+            <br />
+            <code className="bg-gray-800/60 px-2 py-1 rounded text-yellow-300 mt-1 inline-block">
+              README.md → Frontend → Environment variables
+            </code>
+          </p>
+          <p className="text-xs text-gray-400 mt-3">
+            Environment variables are read at build time. After changing{" "}
+            <code className="bg-gray-800/60 px-1.5 py-0.5 rounded">.env.local</code>, you must restart the dev server.ame="text-xs text-gray-300">
             📖 For full details, see{" "}
             <code className="bg-gray-800/60 px-1.5 py-0.5 rounded text-yellow-300">
               README.md → Frontend → Environment variables
